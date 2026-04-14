@@ -1,47 +1,40 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import numpy as np
+import cv2
 from PIL import Image
 import io
-import tensorflow as tf
+import os
 
 app = Flask(__name__)
-
-# Load pretrained model (MobileNet - lightweight)
-model = tf.keras.applications.MobileNetV2(weights="imagenet")
+CORS(app)
 
 def analyze_soil(image_bytes):
-    image = Image.open(io.BytesIO(image_bytes)).resize((224,224))
+    image = Image.open(io.BytesIO(image_bytes))
     image = np.array(image)
 
-    image = tf.keras.applications.mobilenet_v2.preprocess_input(image)
-    image = np.expand_dims(image, axis=0)
+    if len(image.shape) == 2:
+        image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
 
-    preds = model.predict(image)
-    label = tf.keras.applications.mobilenet_v2.decode_predictions(preds, top=1)[0][0][1]
+    avg_color = np.mean(image, axis=(0,1))
+    brightness = np.mean(avg_color)
 
-    # Logic mapping
-    if "sand" in label:
-        moisture = 30
-        npk = 20
-        microplastic = 10
-        advice = "Add organic matter to improve fertility."
-    elif "clay" in label:
-        moisture = 70
-        npk = 50
-        microplastic = 20
-        advice = "Ensure proper drainage."
-    else:
-        moisture = 50
-        npk = 40
-        microplastic = 15
-        advice = "Balanced soil. Maintain nutrients."
+    # Moisture estimation
+    moisture = int(100 - (brightness % 100))
+
+    # NPK estimation (green dominance)
+    npk = int((avg_color[1] / 255) * 100)
+
+    # Microplastic estimation (texture noise)
+    gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+    variance = np.var(gray)
+    microplastic = int(variance % 100)
 
     return {
-        "detected_type": label,
         "microplastic": microplastic,
         "npk": npk,
         "moisture": moisture,
-        "advice": advice
+        "advice": "Use organic compost and reduce plastic contamination."
     }
 
 @app.route('/analyze', methods=['POST'])
@@ -50,5 +43,7 @@ def analyze():
     result = analyze_soil(file.read())
     return jsonify(result)
 
-if __name__ == '__main__':
-    app.run(debug=True)
+# IMPORTANT FOR RENDER
+port = int(os.environ.get("PORT", 5000))
+app.run(host="0.0.0.0", port=port)
+ 
