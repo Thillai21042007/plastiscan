@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PlastiScan</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif}
+body{background:#0f172a;color:#fff}
+header{position:fixed;width:100%;top:0;left:0;z-index:1000;padding:15px 30px;display:flex;justify-content:space-between;align-items:center;background:rgba(0,0,0,0.6);backdrop-filter:blur(10px)}
+header h1{color:#22c55e}
+nav button{margin:5px;background:transparent;border:none;color:#fff;font-size:14px;cursor:pointer}
+section{display:none;min-height:100vh;padding-top:80px}
+.active{display:block}
+
+/* HERO */
+.hero{
+background:url('https://images.unsplash.com/photo-1501004318641-b39e6451bec6') center/cover no-repeat;
+display:flex;align-items:center;justify-content:center;text-align:center;padding:40px}
+.hero-overlay{background:rgba(0,0,0,0.6);padding:40px;border-radius:20px}
+.hero h1{font-size:42px;font-weight:700;margin-bottom:20px}
+.hero p{margin-bottom:20px}
+.btn{background:#22c55e;border:none;padding:12px 25px;border-radius:25px;color:#fff;font-weight:600;cursor:pointer}
+
+.card{background:#1e293b;margin:15px;padding:20px;border-radius:15px;box-shadow:0 10px 25px rgba(0,0,0,0.3)}
+input{padding:10px;margin:10px 0;width:100%;border-radius:8px;border:none}
+
+.dashboard-buttons{display:flex;gap:20px;flex-wrap:wrap}
+.dashboard-buttons button{flex:1}
+
+#result p{margin:5px 0}
+</style>
+</head>
+<body>
+
+<header>
+<h1>PlastiScan</h1>
+<nav>
+<button onclick="showPage('home')">Home</button>
+<button onclick="showPage('dashboard')">Dashboard</button>
+<button onclick="showPage('history')">History</button>
+<button onclick="showPage('login')">Login</button>
+</nav>
+</header>
+
+<section id="home" class="active hero">
+<div class="hero-overlay">
+<h1>Discover the Wonders Beneath Our Soil</h1>
+<p>PlastiScan helps detect microplastics, analyze soil nutrients (NPK), and monitor moisture levels for smarter agriculture.</p>
+<button class="btn" onclick="explore()">Explore More</button>
+</div>
+</section>
+
+<section id="login">
+<div class="card">
+<h2>Login / Signup</h2>
+<input id="username" placeholder="Enter Username">
+<button class="btn" onclick="login()">Login</button>
+</div>
+</section>
+
+<section id="dashboard">
+<div class="card">
+<h2>Dashboard</h2>
+<div class="dashboard-buttons">
+<button class="btn" onclick="connectDevice()">📡 Connect Device</button>
+<button class="btn" onclick="showPage('upload')">📷 Upload Soil Image</button>
+</div>
+</div>
+</section>
+
+<section id="upload">
+<div class="card">
+<h2>Upload Soil Image</h2>
+<p>📸 Guidelines:</p>
+<ul>
+<li>Use clear lighting</li>
+<li>Focus directly on soil</li>
+<li>Avoid blur</li>
+</ul>
+<input type="file" id="imageInput">
+<button class="btn" onclick="analyzeImage()">Analyze</button>
+<div id="result"></div>
+</div>
+</section>
+
+<section id="history">
+<div class="card">
+<h2>History</h2>
+<div id="historyData"></div>
+</div>
+</section>
+
+<script>
+let loggedIn=false;
+let history=[];
+
+function showPage(page){
+document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));
+document.getElementById(page).classList.add('active');
+}
+
+function login(){
+loggedIn=true;
+alert('Logged in');
+showPage('dashboard');
+}
+
+function explore(){
+if(!loggedIn){showPage('login')} else {showPage('dashboard')}
+}
+
+function connectDevice(){
+alert('Device Connected (Simulated)');
+}
+
+async function analyzeImage(){
+    let fileInput = document.getElementById('imageInput');
+    let file = fileInput.files[0];
+
+    if(!file){
+        alert("Upload image");
+        return;
+    }
+
+    let formData = new FormData();
+    formData.append("image", file);
+
+    let response = await fetch("http://127.0.0.1:5000/analyze", {
+        method: "POST",
+        body: formData
+    });
+
+    let data = await response.json();
+
+    let resultHTML = `
+    <div class='card'>
+    <h3>Results</h3>
+    <p>Microplastic Level: ${data.microplastic}%</p>
+    <p>NPK Level: ${data.npk}</p>
+    <p>Moisture: ${data.moisture}%</p>
+    <p>${data.advice}</p>
+    </div>
+    `;
+
+    document.getElementById('result').innerHTML = resultHTML;
+}
+
+function updateHistory(){
+document.getElementById('historyData').innerHTML=history.join('');
+}
+</script>
+
+</body>
+</html>
